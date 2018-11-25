@@ -72,14 +72,6 @@ def sanitize_name(media_name, normalize=True):
   name = name.strip()
   return name
 
-def sanitize_channel(name, lang='en'):
-  name = name.lower()
-  name = name.replace("+", " plus ")
-  name = re.sub(r"\sch\s", " channel ", name)
-  name = re.sub("^channel", "", name)
-  name = re.sub(r"(?<=\D)(?=\d)|(?<=\d)(?=\D)", " ", name)
-  name = words2digits(name, lang=lang)
-  return name
 
 # Remove extra slashes
 def http_normalize_slashes(url):
@@ -715,18 +707,16 @@ class Kodi:
     return located
 
   def FindPVRChannel(self, heard_search):
-    print 'Searching for channel "%s"' % (heard_search.encode("utf-8"))
+    log.info('Searching for channel "%s"', heard_search.encode("utf-8"))
 
+    located = []
     channels = self.GetPVRChannels()
     if 'result' in channels and 'channels' in channels['result']:
-      channel_list = channels['result']['channels']
-      located = self.matchHeard(heard_search, channel_list, 'sanitized_label')
+      ll = self.matchHeard(heard_search, channels['result']['channels'])
+      if ll:
+        located = [(item['channelid'], item['label']) for item in ll]
 
-      if located:
-        print 'Located channel "%s"' % (heard_search.encode("utf-8"))
-        return located['channelid'], located['label']
-
-    return None, None
+    return located
 
   def FindPVRBroadcast(self, heard_search):
     print 'Searching for channel "%s"' % (sanitize_name(heard_search))
@@ -878,6 +868,9 @@ class Kodi:
 
   def PartyPlayMusic(self):
     return self.SendCommand(RPCString("Player.Open", {"item": {"partymode": "music"}}), False)
+
+  def WatchPVRChannel(self, channel_id):
+    return self.SendCommand(RPCString("Player.Open", {"item": {"channelid": channel_id}}))
 
 
   # Tell Kodi to update its video or music libraries
@@ -1597,14 +1590,10 @@ class Kodi:
         answer.append({'title': d['title'], 'episodeid': d['episodeid'], 'show': d['showtitle'], 'label': d['label'], 'dateadded': datetime.datetime.strptime(d['dateadded'], "%Y-%m-%d %H:%M:%S")})
     return answer
 
-  def GetPVRChannels(self):
-    data = self.SendCommand(RPCString("PVR.GetChannels", {"channelgroupid": "alltv"}))
-    # Add in a cleaned up label to improve matching
-    if 'result' in data and 'channels' in data['result']:
-      for channel in data['result']['channels']:
-        channel['sanitized_label'] = sanitize_channel(channel['label'], self.language)
+  def GetPVRChannels(self,):
+    data = self.SendCommand(RPCString("PVR.GetChannels", {"channelgroupid": "alltv", "properties":["channel", "uniqueid"]}))
     return data
-
+   
   def GetPVRBroadcasts(self, channelid):
     data = self.SendCommand(RPCString("PVR.GetBroadcasts", {"channelid": int(channelid), "properties" : ["starttime", "endtime", "progresspercentage", "isactive"]}))
     # broadcastid isn't very useful so add the channelid to each broadcast
@@ -1612,9 +1601,6 @@ class Kodi:
       for broadcast in data['result']['broadcasts']:
         broadcast['channelid'] = channelid
     return data
-
-  def WatchPVRChannel(self, channelid):
-    return self.SendCommand(RPCString("Player.Open", {"item": {"channelid": int(channelid)}}))
 
 
   # System commands
