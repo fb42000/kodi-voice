@@ -434,7 +434,7 @@ class Kodi:
     log.info('Sending request to %s', url if self.logsensitive else '[hidden]')
     log.debug(command)
 
-    timeout = (10, self.read_timeout)
+    timeout = (20, self.read_timeout)
     if not wait_resp:
       # set the read timeout (the second value here) to something really small
       # to 'fake' a non-blocking call.  we want the connect and transmit to
@@ -719,7 +719,7 @@ class Kodi:
     return located
 
   def FindPVRBroadcast(self, heard_search):
-    print 'Searching for channel "%s"' % (sanitize_name(heard_search))
+    log.info('Searching for programme "%s"', heard_search.encode("utf-8"))
 
     # Put together a list of all broadcasts
     channels = self.GetPVRChannels()
@@ -731,17 +731,16 @@ class Kodi:
         if 'result' in channel_broadcasts and 'broadcasts' in channel_broadcasts['result']:
           broadcast_list.extend(channel_broadcasts['result']['broadcasts'])
 
-    # Filter to current broadcasts and sort by progress, so that we switch to the one with the most remaining
+    # Filter to current broadcasts 
     if broadcast_list:
-      current_broadcasts = sorted([x for x in broadcast_list if x['isactive'] == True], key=lambda k: k['progresspercentage'])
-      located = self.matchHeard(heard_search, current_broadcasts, 'label')
+      current_broadcasts = sorted([x for x in broadcast_list if x['isactive'] == True])
+      ll = self.matchHeard(heard_search, current_broadcasts, 'label')
+      
+      if ll:
+        log.info('Located broadcast "%s"', heard_search.encode("utf-8")) 
+        located = [(item['channelid'], item['label']) for item in ll]
 
-      if located:
-        print 'Located broadcast "%s"' % (sanitize_name(located['label']))
-        channel = next((item for item in channel_list if item['channelid'] == located['channelid']), None)
-        return located['broadcastid'], located['label'], channel['channelid'], channel['label']
-
-    return None, None, None, None
+    return located
 
 
   # Playlists
@@ -872,7 +871,6 @@ class Kodi:
   def WatchPVRChannel(self, channel_id):
     return self.SendCommand(RPCString("Player.Open", {"item": {"channelid": channel_id}}))
 
-
   # Tell Kodi to update its video or music libraries
 
   def UpdateVideo(self):
@@ -933,6 +931,9 @@ class Kodi:
   def DownloadSubtitles(self):
     return self.SendCommand(RPCString("GUI.ActivateWindow", {"window": "subtitlesearch"}), False)
 
+  def Guide(self):
+    return self.SendCommand(RPCString("GUI.ActivateWindow", {"window": "tvguide"}), False)
+  
   def ShowMovies(self, genre_id=None):
     if genre_id:
       win = 'videodb://movies/genres/%d/' % (genre_id)
@@ -1595,7 +1596,7 @@ class Kodi:
     return data
    
   def GetPVRBroadcasts(self, channelid):
-    data = self.SendCommand(RPCString("PVR.GetBroadcasts", {"channelid": int(channelid), "properties" : ["starttime", "endtime", "progresspercentage", "isactive"]}))
+    data = self.SendCommand(RPCString("PVR.GetBroadcasts", {"channelid": int(channelid), "properties" : ["starttime", "endtime", "isactive"]}))
     # broadcastid isn't very useful so add the channelid to each broadcast
     if 'result' in data and 'broadcasts' in data['result']:
       for broadcast in data['result']['broadcasts']:
