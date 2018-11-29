@@ -871,6 +871,12 @@ class Kodi:
   def WatchPVRChannel(self, channel_id):
     return self.SendCommand(RPCString("Player.Open", {"item": {"channelid": channel_id}}))
 
+  # Direct record pvr function
+
+  def RecordPVRChannel(self, channel_id):
+    return self.SendCommand(RPCString("PVR.Record", { "record": "toggle", "channelid": channelid }))
+
+
   # Tell Kodi to update its video or music libraries
 
   def UpdateVideo(self):
