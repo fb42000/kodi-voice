@@ -871,6 +871,7 @@ class Kodi:
   def WatchPVRChannel(self, channel_id):
     return self.SendCommand(RPCString("Player.Open", {"item": {"channelid": channel_id}}))
 
+
   # Direct record pvr function
 
   def RecordPVRChannel(self, channel_id):
@@ -906,6 +907,15 @@ class Kodi:
 
   def ToggleWatched(self):
     return self.SendCommand(RPCString("Input.ExecuteAction", {"action": "togglewatched"}))
+
+  def WatchPreviousPVRChannel(self):
+    return self.SendCommand(RPCString("Input.ExecuteAction", {"action": "number0"}))
+
+  def ChannelUp(self):
+    return self.SendCommand(RPCString("Input.ExecuteAction", {"action": "channelup"}))
+
+  def ChannelDown(self):
+    return self.SendCommand(RPCString("Input.ExecuteAction", {"action": "channeldown"}))
 
   def Info(self):
     return self.SendCommand(RPCString("Input.Info"), False)
