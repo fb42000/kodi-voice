@@ -742,8 +742,19 @@ class Kodi:
 
     return located
 
+  def FindPVRRadioChannel(self, heard_search):
+    log.info('Searching for radio channel "%s"', heard_search.encode("utf-8"))
 
-  # Playlists
+    located = []
+    channels = self.GetPVRRadioChannels()
+    if 'result' in channels and 'channels' in channels['result']:
+      ll = self.matchHeard(heard_search, channels['result']['channels'])
+      if ll:
+        located = [(item['channelid'], item['label']) for item in ll]
+
+    return located
+
+    # Playlists
 
   def ClearAudioPlaylist(self):
     return self.SendCommand(RPCString("Playlist.Clear", {"playlistid": 0}))
@@ -871,13 +882,15 @@ class Kodi:
   def WatchPVRChannel(self, channel_id):
     return self.SendCommand(RPCString("Player.Open", {"item": {"channelid": channel_id}}))
 
+  def ListenPVRRadioChannel(self, channel_id):
+    return self.SendCommand(RPCString("Player.Open", {"item": {"channelid": channel_id}}))
+
 
   # Direct record pvr function
 
   def RecordPVRChannel(self, channel_id):
-    return self.SendCommand(RPCString("PVR.Record", { "record": "toggle", "channelid": channelid}))
-
-
+    return self.SendCommand(RPCString("PVR.Record", {"record": "toggle", "channelid": channel_id}))
+  
   # Tell Kodi to update its video or music libraries
 
   def UpdateVideo(self):
@@ -1607,8 +1620,8 @@ class Kodi:
         answer.append({'title': d['title'], 'episodeid': d['episodeid'], 'show': d['showtitle'], 'label': d['label'], 'dateadded': datetime.datetime.strptime(d['dateadded'], "%Y-%m-%d %H:%M:%S")})
     return answer
 
-  def GetPVRChannels(self,):
-    data = self.SendCommand(RPCString("PVR.GetChannels", {"channelgroupid": "alltv", "properties":["channel", "uniqueid"]}))
+  def GetPVRChannels(self):
+    data = self.SendCommand(RPCString("PVR.GetChannels", {"channelgroupid": "alltv",  "properties":["channel", "uniqueid"]}))
     return data
    
   def GetPVRBroadcasts(self, channelid):
@@ -1619,8 +1632,11 @@ class Kodi:
         broadcast['channelid'] = channelid
     return data
 
+  def GetPVRRadioChannels(self):
+    data = self.SendCommand(RPCString("PVR.GetChannels", {"channelgroupid": "allradio",  "properties":["channel", "uniqueid"]}))
+    return data
 
-  # System commands
+   # System commands
 
   def ApplicationQuit(self):
     return self.SendCommand(RPCString("Application.Quit"))
